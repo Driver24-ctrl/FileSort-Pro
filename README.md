@@ -163,13 +163,13 @@ FileSort Pro is a powerful, user-friendly file organization tool designed specif
 
 ## 📈 Roadmap
 
-### **Version 2.1 (Coming Soon)**
+### **Version 1.1 (Coming Soon)**
 - **Batch Processing**: Organize multiple folders at once
 - **Scheduled Organization**: Automatic organization at set times
 - **Cloud Integration**: Support for cloud storage folders
 - **Advanced Filters**: Filter files by size, date, and more
 
-### **Version 2.2 (Future)**
+### **Version 1.2 (Future)**
 - **AI-Powered Organization**: Smart file categorization
 - **Duplicate Detection**: Find and manage duplicate files
 - **File Compression**: Compress old files automatically
@@ -205,6 +205,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Python**: For the powerful programming language
 - **Windows**: For the robust operating system
 - **Community**: For feedback and suggestions
+
 
 
 
