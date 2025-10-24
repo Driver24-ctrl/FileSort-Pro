@@ -56,15 +56,6 @@ FileSort Pro is a powerful, user-friendly file organization tool designed specif
 3. **Configure Options**: Set your preferred organization options
 4. **Click "Organize Files"**: Start the organization process
 
-## 📸 Screenshots
-
-<div align="center">
-  <img src="screenshots/main-window.png" alt="Main Window" width="400">
-  <img src="screenshots/categories.png" alt="Categories Management" width="400">
-  <img src="screenshots/settings.png" alt="Settings" width="400">
-  <img src="screenshots/progress.png" alt="Progress Tracking" width="400">
-</div>
-
 ## 🎯 Perfect For
 
 - **Organizing Downloads folder**
@@ -73,18 +64,6 @@ FileSort Pro is a powerful, user-friendly file organization tool designed specif
 - **Maintaining organized file systems**
 - **Productivity enhancement**
 - **File management automation**
-
-## 💰 Pricing
-
-**FileSort Pro - Just $1!**
-
-- ✅ **One-time purchase**
-- ✅ **No subscription fees**
-- ✅ **Lifetime updates**
-- ✅ **Full source code included**
-- ✅ **Commercial use allowed**
-
-[**Buy Now on Gumroad**](https://gumroad.com/l/filesort-pro)
 
 ## 🔧 System Requirements
 
@@ -161,8 +140,6 @@ FileSort Pro is a powerful, user-friendly file organization tool designed specif
 ### **Getting Help**
 - **Documentation**: Check the included documentation
 - **GitHub Issues**: Report bugs and request features
-- **Email Support**: Contact us for technical support
-- **Community**: Join our user community
 
 ### **Common Issues**
 - **Application won't start**: Check Windows compatibility
@@ -183,12 +160,6 @@ FileSort Pro is a powerful, user-friendly file organization tool designed specif
 - **Flexible Options**: Customize to your needs
 - **Safe Operations**: No risk to your files
 - **Fast Results**: Organize files in seconds
-
-### **Great Value**
-- **Just $1**: Incredible value for the features
-- **No Subscription**: One-time purchase
-- **Lifetime Updates**: Free updates forever
-- **Commercial Use**: Use in your business
 
 ## 📈 Roadmap
 
@@ -235,14 +206,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Windows**: For the robust operating system
 - **Community**: For feedback and suggestions
 
-## 📊 Statistics
 
-- **Files Organized**: 1,000,000+ files organized by users
-- **User Satisfaction**: 4.8/5 stars average rating
-- **Download Count**: 10,000+ downloads
-- **Active Users**: 5,000+ active users
-
----
 
 <div align="center">
   <h3>Ready to organize your files?</h3>
@@ -252,4 +216,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
     </a>
   </p>
   <p><strong>Just $1 - Start organizing your files today!</strong></p>
+
 </div>
