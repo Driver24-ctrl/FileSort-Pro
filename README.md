@@ -5,9 +5,9 @@
   
   **The Ultimate File Organization Tool for Windows**
   
-  [![Download](https://img.shields.io/badge/Download-FileSort%20Pro-blue?style=for-the-badge&logo=windows)](https://gumroad.com/l/filesort-pro)
-  [![Price](https://img.shields.io/badge/Price-$1-green?style=for-the-badge)](https://gumroad.com/l/filesort-pro)
-  [![Windows](https://img.shields.io/badge/Windows-10%2B-blue?style=for-the-badge&logo=windows)](https://gumroad.com/l/filesort-pro)
+  [![Download](https://img.shields.io/badge/Download-FileSort%20Pro-blue?style=for-the-badge&logo=windows)](https://athreya8.gumroad.com/l/filesortpro)
+  [![Price](https://img.shields.io/badge/Price-$1-green?style=for-the-badge)](https://athreya8.gumroad.com/l/filesortpro)
+  [![Windows](https://img.shields.io/badge/Windows-10%2B-blue?style=for-the-badge&logo=windows)](https://athreya8.gumroad.com/l/filesortpro)
 </div>
 
 ## 🎯 What is FileSort Pro?
@@ -205,5 +205,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Python**: For the powerful programming language
 - **Windows**: For the robust operating system
 - **Community**: For feedback and suggestions
+
 
 
