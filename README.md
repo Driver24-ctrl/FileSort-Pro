@@ -207,14 +207,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Community**: For feedback and suggestions
 
 
-
-<div align="center">
-  <h3>Ready to organize your files?</h3>
-  <p>
-    <a href="https://gumroad.com/l/filesort-pro">
-      <img src="https://img.shields.io/badge/Download-FileSort%20Pro-blue?style=for-the-badge&logo=windows" alt="Download FileSort Pro">
-    </a>
-  </p>
-  <p><strong>Just $1 - Start organizing your files today!</strong></p>
-
-</div>
