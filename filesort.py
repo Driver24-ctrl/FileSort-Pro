@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 import json
+import copy
 import winreg
 import logging
 import threading
@@ -34,10 +35,9 @@ class ConfigManager:
             },
             "settings": {
                 "default_source": os.path.join(os.path.expanduser("~"), "Downloads"),
-                "default_dest": os.path.join(os.path.expanduser("~"), "Downloads", "Organized"),
-                "auto_organize": False,
+                "default_dest": os.path.join(os.path.expanduser("~"), "Downloads"),
                 "create_date_folders": False,
-                "skip_duplicates": True,
+                "skip_duplicates": False,
                 "log_level": "INFO"
             },
             "recent_operations": []
@@ -49,15 +49,18 @@ class ConfigManager:
     
     def load_config(self):
         try:
+            # Always start with a fresh copy of default config
+            default_copy = copy.deepcopy(self.default_config)
+            
             if os.path.exists(self.config_file):
                 with open(self.config_file, 'r') as f:
                     config = json.load(f)
                 # Merge with defaults for any missing keys
-                return self.merge_configs(self.default_config, config)
-            return self.default_config.copy()
+                return self.merge_configs(default_copy, config)
+            return default_copy
         except Exception as e:
             logging.error(f"Failed to load config: {e}")
-            return self.default_config.copy()
+            return copy.deepcopy(self.default_config)
     
     def save_config(self):
         try:
@@ -68,15 +71,16 @@ class ConfigManager:
     
     def merge_configs(self, default, user):
         """Recursively merge user config with defaults"""
+        result = copy.deepcopy(default)
         for key, value in user.items():
-            if key in default:
-                if isinstance(value, dict) and isinstance(default[key], dict):
-                    default[key] = self.merge_configs(default[key], value)
+            if key in result:
+                if isinstance(value, dict) and isinstance(result[key], dict):
+                    result[key] = self.merge_configs(result[key], value)
                 else:
-                    default[key] = value
+                    result[key] = value
             else:
-                default[key] = value
-        return default
+                result[key] = value
+        return result
 
 # Global config manager
 config_manager = ConfigManager()
@@ -115,7 +119,8 @@ class FileOrganizer(QThread):
             "skipped": 0,
             "errors": 0,
             "categories_created": set(),
-            "errors_list": []
+            "errors_list": [],
+            "moved_files": []  # Track movements for revert
         }
         
         # Collect all files first for progress tracking
@@ -140,6 +145,7 @@ class FileOrganizer(QThread):
                 # Skip files without extensions if configured
                 if not ext and self.options.get("skip_no_extension", True):
                     results["skipped"] += 1
+                    logging.info(f"Skipped file (no extension): {file_path}")
                     self.file_processed.emit(filename, "Skipped (no extension)")
                     continue
                 
@@ -152,9 +158,15 @@ class FileOrganizer(QThread):
                 # Handle duplicates
                 if os.path.exists(dest_path):
                     if self.options.get("skip_duplicates", True):
-                        results["skipped"] += 1
-                        self.file_processed.emit(filename, "Skipped (duplicate)")
-                        continue
+                        # Move to duplicates folder instead of skipping
+                        duplicates_dir = os.path.join(self.destination_folder, "duplicates")
+                        dest_path = os.path.join(duplicates_dir, filename)
+                        
+                        # If duplicate also exists in duplicates folder, make it unique
+                        if os.path.exists(dest_path):
+                            dest_path = self.get_unique_filename(dest_path)
+                        
+                        category = "duplicates"
                     else:
                         dest_path = self.get_unique_filename(dest_path)
                 
@@ -162,9 +174,19 @@ class FileOrganizer(QThread):
                 os.makedirs(os.path.dirname(dest_path), exist_ok=True)
                 shutil.move(file_path, dest_path)
                 
+                # Track the movement for revert
+                results["moved_files"].append({
+                    "source": file_path,
+                    "destination": dest_path,
+                    "filename": filename
+                })
+                
                 results["processed"] += 1
                 results["categories_created"].add(category)
-                self.file_processed.emit(filename, "Moved successfully")
+                
+                # Enhanced logging
+                logging.info(f"Moved file: {file_path} -> {dest_path}")
+                self.file_processed.emit(filename, f"Moved to {category} folder")
                 
             except Exception as e:
                 results["errors"] += 1
@@ -244,6 +266,7 @@ class FileSortApp(QtWidgets.QMainWindow):
         self.setup_tray()
         self.load_settings()
         self.organizer_thread = None
+        self.last_operation_moves = []  # Store last operation's file movements
         
     def setup_logging(self):
         """Setup logging for the application"""
@@ -251,14 +274,34 @@ class FileSortApp(QtWidgets.QMainWindow):
         os.makedirs(log_dir, exist_ok=True)
         
         log_file = os.path.join(log_dir, f"filesort_{datetime.now().strftime('%Y%m%d')}.log")
-        logging.basicConfig(
-            level=getattr(logging, config_manager.config["settings"]["log_level"]),
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file),
-                logging.StreamHandler()
-            ]
-        )
+        
+        # Get root logger and clear any existing handlers
+        root_logger = logging.getLogger()
+        root_logger.handlers.clear()
+        
+        # Set logging level
+        root_logger.setLevel(getattr(logging, config_manager.config["settings"]["log_level"]))
+        
+        # Create formatter
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        
+        # Add file handler
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
+        root_logger.addHandler(file_handler)
+        
+        # Add console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(formatter)
+        root_logger.addHandler(console_handler)
+        
+        # Log application startup
+        logging.info("=" * 50)
+        logging.info("FileSort Pro application started")
+        logging.info(f"Log level: {config_manager.config['settings']['log_level']}")
+        logging.info("=" * 50)
     
     def setup_ui(self):
         """Setup the main user interface"""
@@ -333,10 +376,10 @@ class FileSortApp(QtWidgets.QMainWindow):
         self.recursive_chk.setChecked(True)
         
         self.date_folders_chk = QCheckBox("Create date-based subfolders")
-        self.date_folders_chk.setChecked(config_manager.config["settings"]["create_date_folders"])
+        self.date_folders_chk.setChecked(config_manager.config["settings"].get("create_date_folders", False))
         
-        self.skip_duplicates_chk = QCheckBox("Skip duplicate files")
-        self.skip_duplicates_chk.setChecked(config_manager.config["settings"]["skip_duplicates"])
+        self.skip_duplicates_chk = QCheckBox("Move duplicate files to duplicates folder")
+        self.skip_duplicates_chk.setChecked(config_manager.config["settings"].get("skip_duplicates", False))
         
         self.preview_chk = QCheckBox("Preview before organizing")
         self.preview_chk.setChecked(True)
@@ -357,8 +400,14 @@ class FileSortApp(QtWidgets.QMainWindow):
         self.stop_btn.setEnabled(False)
         self.stop_btn.setStyleSheet("QPushButton { background-color: #f44336; color: white; font-weight: bold; padding: 10px; }")
         
+        self.revert_btn = QPushButton("Revert Last Organization")
+        self.revert_btn.clicked.connect(self.revert_last_operation)
+        self.revert_btn.setEnabled(False)
+        self.revert_btn.setStyleSheet("QPushButton { background-color: #FF9800; color: white; font-weight: bold; padding: 10px; }")
+        
         button_layout.addWidget(self.run_btn)
         button_layout.addWidget(self.stop_btn)
+        button_layout.addWidget(self.revert_btn)
         button_layout.addStretch()
         
         # Results area
@@ -468,11 +517,7 @@ class FileSortApp(QtWidgets.QMainWindow):
         startup_layout.addWidget(self.startup_help_btn)
         startup_layout.addStretch()
         
-        self.auto_organize_chk = QCheckBox("Auto-organize Downloads folder")
-        self.auto_organize_chk.setChecked(config_manager.config["settings"]["auto_organize"])
-        
         general_layout.addLayout(startup_layout)
-        general_layout.addWidget(self.auto_organize_chk)
         
         # Advanced settings
         advanced_group = QGroupBox("Advanced Settings")
@@ -525,6 +570,12 @@ class FileSortApp(QtWidgets.QMainWindow):
         layout.addLayout(log_controls)
         
         self.tab_widget.addTab(tab, "Logs")
+        
+        # Connect tab change signal to auto-refresh logs
+        self.tab_widget.currentChanged.connect(self.on_tab_changed)
+        
+        # Load logs initially
+        self.refresh_logs()
     
     def setup_tray(self):
         """Setup system tray integration"""
@@ -556,13 +607,26 @@ class FileSortApp(QtWidgets.QMainWindow):
     def load_settings(self):
         """Load settings from configuration"""
         settings = config_manager.config["settings"]
-        self.source_input.setText(settings["default_source"])
-        self.dest_input.setText(settings["default_dest"])
+        self.source_input.setText(settings.get("default_source", os.path.join(os.path.expanduser("~"), "Downloads")))
+        self.dest_input.setText(settings.get("default_dest", os.path.join(os.path.expanduser("~"), "Downloads")))
+        
+        # Also save source and dest when they're changed
+        self.source_input.textChanged.connect(self.save_default_paths)
+        self.dest_input.textChanged.connect(self.save_default_paths)
+    
+    def save_default_paths(self):
+        """Save source and destination paths to config"""
+        config_manager.config["settings"]["default_source"] = self.source_input.text()
+        config_manager.config["settings"]["default_dest"] = self.dest_input.text()
+        config_manager.save_config()
     
     def save_settings(self):
         """Save current settings to configuration"""
-        config_manager.config["settings"]["auto_organize"] = self.auto_organize_chk.isChecked()
         config_manager.config["settings"]["log_level"] = self.log_level_combo.currentText()
+        config_manager.config["settings"]["create_date_folders"] = self.date_folders_chk.isChecked()
+        config_manager.config["settings"]["skip_duplicates"] = self.skip_duplicates_chk.isChecked()
+        config_manager.config["settings"]["default_source"] = self.source_input.text()
+        config_manager.config["settings"]["default_dest"] = self.dest_input.text()
         config_manager.save_config()
         
         QMessageBox.information(self, "Settings", "Settings saved successfully!")
@@ -684,6 +748,12 @@ class FileSortApp(QtWidgets.QMainWindow):
             QMessageBox.information(self, "Organization Complete", summary)
             self.status_bar.showMessage("Organization completed successfully")
             
+            # Store the file movements for revert
+            if "moved_files" in results and len(results["moved_files"]) > 0:
+                self.last_operation_moves = results["moved_files"]
+                self.revert_btn.setEnabled(True)
+                logging.info(f"Stored {len(self.last_operation_moves)} file movements for revert")
+            
             # Save operation to recent operations
             config_manager.config["recent_operations"].append({
                 "timestamp": datetime.now().isoformat(),
@@ -775,20 +845,120 @@ class FileSortApp(QtWidgets.QMainWindow):
             config_manager.save_config()
             self.populate_extensions_list(category)
     
+    def on_tab_changed(self, index):
+        """Handle tab change - refresh logs when logs tab is selected"""
+        tab_name = self.tab_widget.tabText(index)
+        if tab_name == "Logs":
+            self.refresh_logs()
+    
     def refresh_logs(self):
         """Refresh the log display"""
         log_dir = os.path.join(os.path.expanduser("~"), "AppData", "Local", "FileSort", "logs")
         log_file = os.path.join(log_dir, f"filesort_{datetime.now().strftime('%Y%m%d')}.log")
         
         if os.path.exists(log_file):
-            with open(log_file, 'r') as f:
-                self.log_display.setPlainText(f.read())
+            try:
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    if content.strip():
+                        self.log_display.setPlainText(content)
+                        # Scroll to bottom to show most recent logs
+                        cursor = self.log_display.textCursor()
+                        cursor.movePosition(cursor.End)
+                        self.log_display.setTextCursor(cursor)
+                    else:
+                        self.log_display.setPlainText("Log file exists but is empty.")
+            except Exception as e:
+                self.log_display.setPlainText(f"Error reading log file: {str(e)}")
         else:
-            self.log_display.setPlainText("No log file found.")
+            self.log_display.setPlainText("No log file found for today.\nLogs will appear here after you organize files.")
     
     def clear_logs(self):
         """Clear the log display"""
         self.log_display.clear()
+    
+    def revert_last_operation(self):
+        """Revert the last file organization operation"""
+        if not self.last_operation_moves:
+            QMessageBox.warning(self, "No Operation", "No previous operation to revert.")
+            return
+        
+        reply = QMessageBox.question(self, "Confirm Revert", 
+                                    f"Are you sure you want to revert the last organization?\n\n"
+                                    f"This will move {len(self.last_operation_moves)} files back to their original locations.",
+                                    QMessageBox.Yes | QMessageBox.No)
+        
+        if reply == QMessageBox.No:
+            return
+        
+        # Create revert progress
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setMaximum(len(self.last_operation_moves))
+        self.progress_bar.setValue(0)
+        self.revert_btn.setEnabled(False)
+        self.results_text.clear()
+        self.status_bar.showMessage("Reverting operation...")
+        
+        reverted = 0
+        errors = 0
+        
+        for idx, move in enumerate(self.last_operation_moves):
+            try:
+                # Move file back from destination to source
+                source = move["destination"]
+                dest = move["source"]
+                
+                # Make sure source exists
+                if not os.path.exists(source):
+                    logging.warning(f"Source file not found during revert: {source}")
+                    errors += 1
+                    continue
+                
+                # Create destination directory if it doesn't exist
+                os.makedirs(os.path.dirname(dest), exist_ok=True)
+                
+                # Handle if destination already exists
+                if os.path.exists(dest):
+                    dest = self.get_unique_filename(dest)
+                
+                # Move file back
+                shutil.move(source, dest)
+                reverted += 1
+                logging.info(f"Reverted: {source} -> {dest}")
+                self.results_text.append(f"{move['filename']}: Reverted successfully")
+                self.results_text.ensureCursorVisible()
+                
+            except Exception as e:
+                errors += 1
+                error_msg = f"Failed to revert {move['filename']}: {str(e)}"
+                logging.error(error_msg)
+                self.results_text.append(f"{move['filename']}: Error - {str(e)}")
+                self.results_text.ensureCursorVisible()
+            
+            # Update progress
+            self.progress_bar.setValue(idx + 1)
+        
+        # Show completion
+        self.progress_bar.setVisible(False)
+        self.status_bar.showMessage(f"Revert complete: {reverted} files reverted, {errors} errors")
+        
+        summary = f"Revert completed!\n\n"
+        summary += f"Reverted: {reverted} files\n"
+        summary += f"Errors: {errors}"
+        
+        QMessageBox.information(self, "Revert Complete", summary)
+        
+        # Clear the stored moves
+        self.last_operation_moves = []
+    
+    def get_unique_filename(self, filepath):
+        """Generate unique filename if file exists"""
+        base, ext = os.path.splitext(filepath)
+        counter = 1
+        while os.path.exists(filepath):
+            filepath = f"{base}_{counter}{ext}"
+            counter += 1
+        return filepath
     
     def closeEvent(self, event):
         """Handle application close event"""
@@ -810,9 +980,6 @@ class FileSortApp(QtWidgets.QMainWindow):
 # -----------------------------
 def main():
     """Main application entry point"""
-    # Setup logging first
-    logging.basicConfig(level=logging.INFO)
-    
     # Create application
     app = QtWidgets.QApplication(sys.argv)
     app.setApplicationName("FileSort Pro")

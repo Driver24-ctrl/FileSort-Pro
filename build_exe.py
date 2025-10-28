@@ -19,7 +19,7 @@ def build_executable():
         "--onefile",
         "--windowed",
         "--name=FileSortPro",
-        "--icon=icon.ico",  # You'll need to add an icon file
+        "--icon=icons/icon_256x256.ico",  # Use the 256x256 icon
         "--add-data=README.md;.",
         "--add-data=LICENSE;.",
         "--add-data=PRIVACY_POLICY.md;.",
@@ -95,7 +95,7 @@ if not exist "%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\FileSort Pro"
 powershell "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\FileSort Pro\\FileSort Pro.lnk'); $Shortcut.TargetPath = '%PROGRAMFILES%\\FileSort Pro\\FileSortPro.exe'; $Shortcut.Save()"
 
 echo.
-echo ✅ FileSort Pro installed successfully!
+echo SUCCESS: FileSort Pro installed successfully!
 echo You can now launch it from the Start menu or desktop shortcut.
 pause
 """

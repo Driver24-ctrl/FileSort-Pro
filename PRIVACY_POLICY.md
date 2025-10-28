@@ -132,3 +132,4 @@ If you have any questions about this Privacy Policy, please contact us:
 ---
 
 **This Privacy Policy is designed to be transparent and honest about our data practices. FileSort Pro is built with privacy as a core principle, ensuring your data stays on your computer and under your control.**
+
